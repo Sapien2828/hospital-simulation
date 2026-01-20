@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>病院災害対応シミュレーション - 完全統合版</title>
+<style>
+    body {
+        background-color: #1a1a1a;
+        color: white;
+        font-family: 'Segoe UI', 'Impact', sans-serif;
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    
+    /* --- トップ画面 --- */
+    #top-screen {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        width: 100%; height: 100%; 
+        background: linear-gradient(to bottom, #111, #333);
+        z-index: 3000; position: absolute; top: 0; left: 0;
+    }
+    #top-title {
+        font-size: 3em; color: #ffd700; text-shadow: 4px 4px 0 #000; 
+        margin-bottom: 30px; letter-spacing: 2px;
+    }
+    
+    #player-input-container { margin-bottom: 20px; text-align: center; }
+    #player-id-input {
+        padding: 15px; font-size: 1.2em; width: 300px; text-align: center;
+        border-radius: 5px; border: 2px solid #888; background: #222; color: white; outline: none;
+    }
+    #player-id-input:focus { border-color: #00ffff; box-shadow: 0 0 10px #00ffff; }
+
+    .mode-btn {
+        width: 320px; padding: 20px; margin: 10px; font-size: 1.4em; color: white;
+        background: #444; border: 2px solid #888; border-radius: 10px; 
+        cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+    .btn-train { background: #cc3333; border-color: #ff6666; } 
+    .btn-train:hover { background: #ee4444; transform: scale(1.05); }
+    
+    .btn-practice { background: #33cc33; border-color: #66ff66; } 
+    .btn-practice:hover { background: #44ee44; transform: scale(1.05); }
+    
+    /* 管理者ボタン（小さく配置） */
+    #admin-entry-btn {
+        position: absolute; bottom: 20px; right: 20px;
+        background: transparent; color: #555; border: 1px solid #555;
+        padding: 5px 10px; font-size: 0.8em; cursor: pointer;
+    }
+    #admin-entry-btn:hover { color: #aaa; border-color: #aaa; }
+
+    /* --- ゲーム画面 --- */
+    #game-wrapper {
+        display: none; width: 100%; height: 100%; 
+        flex-direction: column; align-items: center;
+    }
+
+    #ui-container {
+        width: 100%; height: 85px; 
+        background: linear-gradient(to bottom, #444, #222);
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        padding: 5px 20px; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.8);
+        z-index: 10; border-bottom: 2px solid #666;
+    }
+    #top-row { display: flex; width: 100%; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    
+    #status-title { font-weight: bold; font-size: 1.2em; color: #ddd; text-shadow: 2px 2px 0px #000; letter-spacing: 1px; }
+    #status-message { font-size: 0.9em; color: #ccc; flex: 1; margin-left: 20px; font-family: sans-serif; }
+    #coord-display { color: #00ff00; text-shadow: 1px 1px 2px black; font-family: monospace; }
+
+    #btn-finish-practice {
+        display: none;
+        background: #ff9900; color: black; border: 2px solid #fff; font-weight: bold;
+        padding: 5px 15px; cursor: pointer; border-radius: 5px; margin-left: 20px;
+        box-shadow: 0 0 5px orange;
+    }
+    #btn-finish-practice:hover { background: #ffcc00; }
+
+    #timer-container {
+        width: 80%; max-width: 800px; height: 25px; position: relative;
+        transform: skewX(-20deg); border: 3px solid #ffd700; background-color: #330000;
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.5), inset 0 0 10px #000; margin-bottom: 5px;
+    }
+    #timer-bar-fill {
+        width: 0%; height: 100%; background: linear-gradient(to bottom, #00ffff, #0088ff);
+        box-shadow: inset 0 2px 5px rgba(255,255,255,0.4); 
+        transition: width 0.1s linear, background 0.5s; position: relative;
+    }
+    #time-text-overlay {
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) skewX(20deg);
+        color: white; font-weight: bold; font-size: 1.1em; 
+        text-shadow: 2px 2px 0 #000; z-index: 2; pointer-events: none; width: 100%; text-align: center;
+    }
+
+    #map-container { flex: 1; width: 100%; display: flex; justify-content: center; align-items: center; background: #000; position: relative; overflow: hidden; }
+    canvas { background: #000; cursor: crosshair; box-shadow: 0 0 20px black; max-width: 98vw; max-height: 85vh; object-fit: contain; }
+
+    #event-popup {
+        display: none; position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%); width: 450px; max-height: 80vh; overflow-y: auto;
+        background: rgba(0, 0, 0, 0.95); border: 2px solid #fff; border-radius: 8px;
+        padding: 20px; z-index: 1000; box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+    }
+    .popup-header { display: flex; justify-content: space-between; border-bottom: 1px solid #777; padding-bottom: 10px; margin-bottom: 15px; }
+    #event-title { font-size: 1.3em; color: gold; font-weight: bold; }
+    #close-btn { cursor: pointer; font-size: 1.5em; line-height: 0.8; }
+    #event-desc { min-height: 50px; margin-bottom: 20px; line-height: 1.5; font-size: 1em; }
+
+    .task-item { background: #333; border: 1px solid #555; padding: 12px; margin-bottom: 8px; cursor: pointer; border-radius: 4px; transition: 0.2s; display: flex; align-items: center; }
+    .task-item:hover { background: #444; border-color: #888; }
+    .task-item.completed { background-color: #222; color: #777; border-color: #444; text-decoration: line-through; }
+    .choice-btn { width: 100%; padding: 12px; margin-top: 8px; background: #0055aa; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; text-align: left; transition: 0.2s; }
+    .choice-btn:hover { background: #0066cc; }
+
+    /* --- リザルト画面 & 管理者画面 --- */
+    .overlay-screen {
+        display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.95); z-index: 2000;
+        flex-direction: column; justify-content: center; align-items: center; color: white;
+    }
+    .overlay-content {
+        width: 90%; max-width: 1200px; height: 90%; background: #222;
+        border: 2px solid #ffd700; padding: 20px; display: flex; flex-direction: column;
+    }
+    .overlay-title { text-align: center; font-size: 2em; color: gold; margin-bottom: 10px; border-bottom: 1px solid #555; padding-bottom: 10px; }
+    .table-container { flex: 1; overflow-y: auto; border: 1px solid #555; margin-bottom: 15px; }
+    
+    table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 0.9em; }
+    th, td { border: 1px solid #444; padding: 8px; text-align: left; }
+    th { background: #333; color: #ddd; position: sticky; top: 0; }
+    tr:nth-child(even) { background: #2a2a2a; }
+    
+    .button-area { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+    .dl-btn { padding: 15px 30px; font-size: 1.1em; color: white; border: none; cursor: pointer; border-radius: 5px; min-width: 200px; }
+    .btn-csv { background: #008800; } .btn-csv:hover { background: #00aa00; }
+    .btn-retry { background: #0066cc; } .btn-retry:hover { background: #0088ee; }
+    .btn-exit { background: #cc3333; } .btn-exit:hover { background: #ee4444; }
+    .btn-close { background: #555; } .btn-close:hover { background: #777; }
+    
+    /* 管理者ログイン用 */
+    #admin-login-overlay {
+        display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); z-index: 4000; justify-content: center; align-items: center;
+    }
+    .login-box { background: #333; padding: 30px; border: 2px solid #888; text-align: center; }
+    #admin-pass-input { padding: 10px; font-size: 1.2em; margin-bottom: 15px; }
+</style>
+</head>
+<body>
+
+    <div id="top-screen">
+        <div id="top-title">病院災害対応シミュレーション</div>
+        
+        <div id="player-input-container">
+            <input type="text" id="player-id-input" placeholder="職員ID または 氏名を入力">
+            <div style="font-size:0.8em; color:#aaa; margin-top:5px;">※訓練モード時は必須</div>
+        </div>
+
+        <button class="mode-btn btn-train" onclick="startGame('training')">🔥 発災訓練モード<br><span style="font-size:0.6em">制限時間 30分</span></button>
+        <button class="mode-btn btn-practice" onclick="startGame('practice')">🔰 練習モード<br><span style="font-size:0.6em">時間無制限・任意終了</span></button>
+        
+        <button id="admin-entry-btn" onclick="showAdminLogin()">管理者モード</button>
+    </div>
+
+    <div id="game-wrapper">
+        <div id="ui-container">
+            <div id="top-row">
+                <div id="status-title">🏥 シミュレーション</div>
+                <button id="btn-finish-practice" onclick="finishGame()">練習を終了する</button>
+                <div id="status-message" style="margin-left: 20px;">待機中...</div>
+                <div class="status-info"><span id="coord-display">X:0, Y:0</span></div>
+            </div>
+            <div id="timer-container">
+                <div id="timer-bar-fill"></div>
+                <div id="time-text-overlay">TIME: 0.0</div>
+            </div>
+        </div>
+        <div id="map-container"><canvas id="map-canvas"></canvas></div>
+    </div>
+
+    <div id="event-popup">
+        <div class="popup-header"><span id="event-title">イベント</span><span id="close-btn">×</span></div>
+        <div id="event-desc"></div>
+        <div id="event-content"></div>
+    </div>
+
+    <div id="result-screen" class="overlay-screen">
+        <div class="overlay-content">
+            <div class="overlay-title">SIMULATION RESULT</div>
+            <div class="table-container">
+                <table id="result-table">
+                    <thead>
+                        <tr><th>経過時間(分)</th><th>実時刻</th><th>場所</th><th>イベント</th><th>選択</th><th>結果</th><th>消費</th></tr>
+                    </thead>
+                    <tbody id="result-log-body"></tbody>
+                </table>
+            </div>
+            <div class="button-area">
+                <button class="dl-btn btn-csv" onclick="downloadCSV()">CSV保存</button>
+                <button class="dl-btn btn-retry" onclick="retryGame()">もう一度最初から</button>
+                <button class="dl-btn btn-exit" onclick="exitGame()">終了する</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-login-overlay">
+        <div class="login-box">
+            <h2 style="color:white; margin-top:0;">管理者ログイン</h2>
+            <input type="password" id="admin-pass-input" placeholder="Password">
+            <br>
+            <button class="dl-btn btn-retry" onclick="checkAdminPass()">ログイン</button>
+            <button class="dl-btn btn-close" onclick="closeAdminLogin()">キャンセル</button>
+        </div>
+    </div>
+
+    <div id="admin-screen" class="overlay-screen">
+        <div class="overlay-content">
+            <div class="overlay-title">管理者モード: 全ログ閲覧</div>
+            <div class="table-container">
+                <table id="admin-table">
+                    <thead>
+                        <tr><th>職員ID</th><th>日時</th><th>経過時間</th><th>場所</th><th>イベント</th><th>選択</th><th>結果</th></tr>
+                    </thead>
+                    <tbody id="admin-log-body"></tbody>
+                </table>
+            </div>
+            <div class="button-area">
+                <button class="dl-btn btn-csv" onclick="downloadAllLogs()">全ログCSV保存</button>
+                <button class="dl-btn btn-exit" onclick="clearAllLogs()">全ログ削除</button>
+                <button class="dl-btn btn-close" onclick="closeAdminScreen()">戻る</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
