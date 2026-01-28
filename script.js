@@ -448,7 +448,7 @@ function renderTaskList(roomIndex) {
     // ★保留ボタン（ログ記録機能修正済み）
     const holdBtn = document.createElement("button");
     holdBtn.className = "choice-btn"; holdBtn.style.backgroundColor = "#555"; holdBtn.style.textAlign = "center"; holdBtn.style.marginTop = "15px";
-    holdBtn.textContent = "一端保留にする（閉じる）";
+    holdBtn.textContent = "一時保留にする（閉じる）";
     
     holdBtn.onclick = () => { 
         // ログに記録
@@ -460,7 +460,7 @@ function renderTaskList(roomIndex) {
             realTime: timeStr, 
             location: room.name, 
             event: "エリア選択画面", 
-            choice: "一端保留にする（閉じる）", 
+            choice: "一時保留にする（閉じる）", 
             result: "対応を後回しにしました", 
             cost: 0 
         });
@@ -480,7 +480,7 @@ function showChoices(roomIndex, taskIndex) {
         const btn = document.createElement('button');
         btn.className = 'choice-btn';
         if (choice.type === 'hold') btn.style.borderLeft = "5px solid orange";
-        btn.textContent = `${choice.text} (${choice.time}分)`;
+        btn.textContent = `${choice.text} `;
         btn.onclick = () => {
             const now = new Date();
             const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
